@@ -2,7 +2,7 @@
 
 ## Description
 
-This script provides players with a location featuring a washer to exchange illegally obtained funds, offering immersive gameplay with dynamic features such as a variable tax rate, configurable wash limits, and more.
+This script provides players with a location featuring a washer to exchange illegally obtained funds, offering immersive gameplay with dynamic features such as a variable tax rate, configurable wash limits, with an animation as well.
 
 ## Features
 
