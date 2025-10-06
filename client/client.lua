@@ -46,7 +46,7 @@ local function CanWash()
     return true
 end
 
---@param coords Vec3
+---@param coords Vec3
 ---@param heading number|nil
 local function TeleportPlayer(coords, heading)
     if not coords or not coords.x or not coords.y or not coords.z then return end
