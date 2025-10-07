@@ -63,15 +63,9 @@ Config = {
 
     -- A table that contains transaction-logging settings.
     logging = {
-        -- Logging options for database and console tracking.
-        -- @alias logOption table
-        -- @type table<string, any>
-        options = {
-            enable = true,
-            console = true,
-            database = true,
-            tableName = "moneywash_logs",
-            discordWebhook = nil
-        }
+        -- Enables or disables console transaction logging.
+        -- @alias enable boolean
+        -- @type boolean
+        enable = true
     }
 }
