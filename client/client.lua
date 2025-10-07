@@ -1,33 +1,11 @@
----@class Vec3
----@field x number
----@field y number
----@field z number
-
----@class WashLocation
----@field coords Vec3
----@field label string|nil
-
----@class TeleportData
----@field coords Vec3
----@field heading number
----@field label string|nil
-
----@class ConfigData
----@field Cooldown number
----@field MaxWashAmount number
----@field WashTime number
----@field Debug boolean
----@field Locations WashLocation[]
----@field TeleportLocations { enter: TeleportData, exit: 
-
 ---@type table
 local targetZones = {}
 
 ---@type number
 local lastWashTime = 0
 
----@param type string
----@param msg string
+---@param type string Notification type ("success", "error", "info")
+---@param msg string Message content
 local function notify(type, msg)
     lib.notify({
         type = type or "info",
@@ -35,7 +13,7 @@ local function notify(type, msg)
     })
 end
 
----@return boolean
+---@return boolean canWash whether the player can start washing
 local function CanWash()
     local currentTime = GetGameTimer() / 1000
     local remaining = (lastWashTime + Config.Cooldown) - currentTime
@@ -46,12 +24,15 @@ local function CanWash()
     return true
 end
 
----@param coords Vec3
----@param heading number|nil
+---@param coords { x: number, y: number, z: number } Coordinates to teleport to
+---@param heading number|nil Optional heading direction
+---@return nil
 local function TeleportPlayer(coords, heading)
     if not coords or not coords.x or not coords.y or not coords.z then return end
+
     DoScreenFadeOut(500)
     while not IsScreenFadedOut() do Wait(0) end
+
     local ped = PlayerPedId()
     SetEntityCoords(ped, coords.x, coords.y, coords.z, false, false, false, true)
     SetEntityHeading(ped, heading or 0.0)
@@ -59,30 +40,38 @@ local function TeleportPlayer(coords, heading)
     DoScreenFadeIn(500)
 end
 
----@param amount number
+---@param amount number Amount of dirty money to wash
+---@return nil
 local function StartWashProgress(amount)
     if not CanWash() then return end
+
     if not amount or amount <= 0 then
         notify("error", "Invalid wash amount.")
         return
     end
+
     if amount > Config.MaxWashAmount then
         notify("error", ("Amount too high. Maximum is $%s."):format(Config.MaxWashAmount))
         return
     end
+
     local ped = PlayerPedId()
     local dict, anim = "mp_arresting", "a_uncuff"
+
     lib.requestAnimDict(dict)
+
     local success = lib.progressCircle({
         duration = Config.WashTime,
         label = ("Washing $%s dirty money..."):format(amount),
         position = "bottom",
         useWhileDead = false,
         canCancel = true,
-        disable = {car = true, move = true, combat = true},
-        anim = {dict = dict, clip = anim, flag = 49}
+        disable = { car = true, move = true, combat = true },
+        anim = { dict = dict, clip = anim, flag = 49 }
     })
+
     ClearPedTasks(ped)
+
     if success then
         lastWashTime = GetGameTimer() / 1000
         TriggerServerEvent("nahs_moneywash:washMoney", amount)
@@ -92,6 +81,7 @@ local function StartWashProgress(amount)
     end
 end
 
+---@return nil
 local function OpenWashMenu()
     lib.registerContext({
         id = "moneywash_menu",
@@ -115,8 +105,16 @@ local function OpenWashMenu()
                 icon = "fa-solid fa-keyboard",
                 onSelect = function()
                     local input = lib.inputDialog("Money Wash", {
-                        {type = "number", label = "Amount", description = "Enter how much dirty money to wash.", required = true, min = 1, max = Config.MaxWashAmount}
+                        {
+                            type = "number",
+                            label = "Amount",
+                            description = "Enter how much dirty money to wash.",
+                            required = true,
+                            min = 1,
+                            max = Config.MaxWashAmount
+                        }
                     })
+
                     local amount = input and tonumber(input[1])
                     if amount and amount > 0 then
                         StartWashProgress(amount)
@@ -132,6 +130,7 @@ local function OpenWashMenu()
             }
         }
     })
+
     lib.showContext("moneywash_menu")
 end
 
@@ -153,6 +152,7 @@ local function InitZones()
         })
         targetZones[#targetZones + 1] = zone
     end
+
     for i, loc in ipairs(Config.TeleportLocations) do
         local enterZone = exports.ox_target:addSphereZone({
             coords = loc.enter.coords,
@@ -168,6 +168,7 @@ local function InitZones()
             }
         })
         targetZones[#targetZones + 1] = enterZone
+
         local exitZone = exports.ox_target:addSphereZone({
             coords = loc.exit.coords,
             radius = 1.5,
@@ -185,6 +186,7 @@ local function InitZones()
     end
 end
 
+---@return nil
 CreateThread(InitZones)
 
 AddEventHandler("onResourceStop", function(resourceName)
