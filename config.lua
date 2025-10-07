@@ -65,9 +65,5 @@ Config = {
     ---@type MoneyWashLoggingConfig
     Logging = {
         Enable = true,               -- Enable/disable logging system
-        ToConsole = true,            -- Log transactions in console
-        ToDatabase = true,           -- Log transactions to SQL table
-        TableName = "moneywash_logs",-- SQL table name for history
-        DiscordWebhook = nil         -- Optional: add webhook URL for Discord logs
     }
 }
