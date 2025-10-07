@@ -1,5 +1,7 @@
+---@type table
 local ESX = exports['es_extended']:getSharedObject()
 
+---@param amount number The amount of dirty money to wash
 RegisterNetEvent('nahs_moneywash:washMoney', function(amount)
     local src = source
     local xPlayer = ESX.GetPlayerFromId(src)
@@ -14,7 +16,6 @@ RegisterNetEvent('nahs_moneywash:washMoney', function(amount)
         return
     end
 
-    -- Add reasonable limits to prevent abuse
     if amount > Config.MaxWashAmount then
         TriggerClientEvent('ox_lib:notify', src, {
             type = 'error',
@@ -23,6 +24,7 @@ RegisterNetEvent('nahs_moneywash:washMoney', function(amount)
         return
     end
 
+    ---@type number
     local dirtyMoney = xPlayer.getAccount('black_money').money
 
     if dirtyMoney < amount then
@@ -35,7 +37,9 @@ RegisterNetEvent('nahs_moneywash:washMoney', function(amount)
 
     xPlayer.removeAccountMoney('black_money', amount)
 
+    ---@type number
     local washedAmount = math.floor(amount * Config.WashRate)
+
     xPlayer.addMoney(washedAmount)
 
     TriggerClientEvent('ox_lib:notify', src, {
