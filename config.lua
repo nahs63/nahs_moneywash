@@ -61,6 +61,14 @@ Config = {
         }
     },
 
+    -- A table that contains general client configuration.
+    client = {
+        -- Enables debug mode for visualizing zones and interactions.
+        -- @alias debug boolean
+        -- @type boolean
+        debug = false
+    },
+
     -- A table that contains transaction-logging settings.
     logging = {
         -- Enables or disables console transaction logging.
@@ -69,3 +77,4 @@ Config = {
         enable = true
     }
 }
+
