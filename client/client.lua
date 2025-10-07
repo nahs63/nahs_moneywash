@@ -4,8 +4,8 @@ local targetZones = {}
 ---@type number
 local lastWashTime = 0
 
----@param type string Notification type ("success", "error", "info")
----@param msg string Message content
+---@param type string
+---@param msg string
 local function notify(type, msg)
     lib.notify({
         type = type or "info",
@@ -13,10 +13,10 @@ local function notify(type, msg)
     })
 end
 
----@return boolean canWash whether the player can start washing
+---@return boolean canWash
 local function CanWash()
     local currentTime = GetGameTimer() / 1000
-    local remaining = (lastWashTime + Config.Cooldown) - currentTime
+    local remaining = (lastWashTime + Config.wash.cooldown) - currentTime
     if remaining > 0 then
         notify("error", ("You must wait %s seconds before washing again."):format(math.ceil(remaining)))
         return false
@@ -24,11 +24,11 @@ local function CanWash()
     return true
 end
 
----@param coords { x: number, y: number, z: number } Coordinates to teleport to
----@param heading number|nil Optional heading direction
+---@param coords vector3
+---@param heading number|nil
 ---@return nil
 local function TeleportPlayer(coords, heading)
-    if not coords or not coords.x or not coords.y or not coords.z then return end
+    if not coords then return end
 
     DoScreenFadeOut(500)
     while not IsScreenFadedOut() do Wait(0) end
@@ -36,11 +36,12 @@ local function TeleportPlayer(coords, heading)
     local ped = PlayerPedId()
     SetEntityCoords(ped, coords.x, coords.y, coords.z, false, false, false, true)
     SetEntityHeading(ped, heading or 0.0)
+
     Wait(300)
     DoScreenFadeIn(500)
 end
 
----@param amount number Amount of dirty money to wash
+---@param amount number
 ---@return nil
 local function StartWashProgress(amount)
     if not CanWash() then return end
@@ -50,24 +51,22 @@ local function StartWashProgress(amount)
         return
     end
 
-    if amount > Config.MaxWashAmount then
-        notify("error", ("Amount too high. Maximum is $%s."):format(Config.MaxWashAmount))
+    if amount > Config.wash.maxAmount then
+        notify("error", ("Amount too high. Maximum is $%s."):format(Config.wash.maxAmount))
         return
     end
 
     local ped = PlayerPedId()
-    local dict, anim = "mp_arresting", "a_uncuff"
-
-    lib.requestAnimDict(dict)
+    lib.requestAnimDict("mp_arresting")
 
     local success = lib.progressCircle({
-        duration = Config.WashTime,
+        duration = Config.wash.time,
         label = ("Washing $%s dirty money..."):format(amount),
         position = "bottom",
         useWhileDead = false,
         canCancel = true,
         disable = { car = true, move = true, combat = true },
-        anim = { dict = dict, clip = anim, flag = 49 }
+        anim = { dict = "mp_arresting", clip = "a_uncuff", flag = 49 }
     })
 
     ClearPedTasks(ped)
@@ -76,6 +75,7 @@ local function StartWashProgress(amount)
         lastWashTime = GetGameTimer() / 1000
         TriggerServerEvent("nahs_moneywash:washMoney", amount)
         notify("success", ("You successfully washed $%s!"):format(amount))
+        TriggerServerEvent("nahs_moneywash:logWash", amount)
     else
         notify("error", "Washing cancelled.")
     end
@@ -111,10 +111,9 @@ local function OpenWashMenu()
                             description = "Enter how much dirty money to wash.",
                             required = true,
                             min = 1,
-                            max = Config.MaxWashAmount
+                            max = Config.wash.maxAmount
                         }
                     })
-
                     local amount = input and tonumber(input[1])
                     if amount and amount > 0 then
                         StartWashProgress(amount)
@@ -130,17 +129,16 @@ local function OpenWashMenu()
             }
         }
     })
-
     lib.showContext("moneywash_menu")
 end
 
 ---@return nil
 local function InitZones()
-    for i, loc in ipairs(Config.Locations) do
+    for i, loc in ipairs(Config.locations.points) do
         local zone = exports.ox_target:addSphereZone({
             coords = loc.coords,
             radius = 1.5,
-            debug = Config.Debug or false,
+            debug = Config.client.debug,
             options = {
                 {
                     name = ("nahs_moneywash:spot_%s"):format(i),
@@ -150,14 +148,14 @@ local function InitZones()
                 }
             }
         })
-        targetZones[#targetZones + 1] = zone
+        table.insert(targetZones, zone)
     end
 
-    for i, loc in ipairs(Config.TeleportLocations) do
+    for i, loc in ipairs(Config.teleports.pairs) do
         local enterZone = exports.ox_target:addSphereZone({
             coords = loc.enter.coords,
             radius = 1.5,
-            debug = Config.Debug or false,
+            debug = Config.client.debug,
             options = {
                 {
                     name = ("nahs_moneywash:enter_%s"):format(i),
@@ -167,12 +165,12 @@ local function InitZones()
                 }
             }
         })
-        targetZones[#targetZones + 1] = enterZone
+        table.insert(targetZones, enterZone)
 
         local exitZone = exports.ox_target:addSphereZone({
             coords = loc.exit.coords,
             radius = 1.5,
-            debug = Config.Debug or false,
+            debug = Config.client.debug,
             options = {
                 {
                     name = ("nahs_moneywash:exit_%s"):format(i),
@@ -182,7 +180,7 @@ local function InitZones()
                 }
             }
         })
-        targetZones[#targetZones + 1] = exitZone
+        table.insert(targetZones, exitZone)
     end
 end
 
